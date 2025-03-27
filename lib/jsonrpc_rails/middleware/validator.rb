@@ -128,12 +128,12 @@ module JSON_RPC_Rails
           return [ jsonrpc_error_response(:invalid_request), nil ]
         end
 
-        # Validate the structure of each element in the batch
-        batch.each do |element|
-          # Require *all* elements in a non-empty batch to be valid JSON-RPC structures
-          unless validate_single_structure(element)
-            return [ jsonrpc_error_response(:invalid_request), nil ]
-          end
+        # Find first invalid element - stops processing as soon as it finds one
+        invalid_element = batch.find { |element| !validate_single_structure(element) }
+
+        # If an invalid element was found, return an error response immediately
+        if invalid_element
+          return [ jsonrpc_error_response(:invalid_request), nil ]
         end
 
         # All elements passed structural validation

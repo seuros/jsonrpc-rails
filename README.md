@@ -47,9 +47,14 @@ class TestController < ApplicationController
     render jsonrpc: { message: "Hello from JSON-RPC!" }, id: 1
   end
 
-  def error
-    # Render an error JSON-RPC response
-    render jsonrpc: { code: -32603, message: "Internal error" }, error: true, id: 2
+  def error_code
+    # Render an error using a numeric code (uses default message for standard codes)
+    render jsonrpc: {}, error: -32600, id: 5 # Invalid Request
+  end
+
+  def error_code_override
+    # Render an error using a numeric code, overriding the message and adding data
+    render jsonrpc: { message: "Specific invalid request", data: { field: "xyz" } }, error: -32600, id: 6
   end
 end
 ```
@@ -59,10 +64,20 @@ The renderer wraps your data in the JSON-RPC 2.0 envelope:
   ```json
   { "jsonrpc": "2.0", "result": { ... }, "id": 1 }
   ```
-- **Error Response:**
+- **Error Response (using numeric code):**
   ```json
-  { "jsonrpc": "2.0", "error": { "code": -32603, "message": "Internal error" }, "id": 2 }
+  { "jsonrpc": "2.0", "error": { "code": -32600, "message": "Invalid Request" }, "id": 5 }
   ```
+- **Error Response (using numeric code with override):**
+  ```json
+  { "jsonrpc": "2.0", "error": { "code": -32600, "message": "Specific invalid request", "data": { "field": "xyz" } }, "id": 6 }
+  ```
+
+To render an error response, pass a numeric error code or a predefined Symbol to the `error:` option:
+- **Numeric Code:** Pass the integer code directly (e.g., `error: -32600`). If the code is a standard JSON-RPC error code (`-32700`, `-32600` to `-32603`, `-32000`), a default message will be used (as shown in the `error_code` example).
+- **Symbol:** Pass a symbol corresponding to a standard error (e.g., `error: :invalid_request`). The gem will look up the code and default message. (See `lib/json_rpc/json_rpc_error.rb` for available symbols).
+
+You can override the default `message` or add `data` for either method by providing them in the main hash passed to `render jsonrpc:`, as demonstrated in the `error_code_override` example.
 
 ### Handling Requests
 

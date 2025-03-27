@@ -42,7 +42,15 @@ module JSON_RPC
     # @raise [ArgumentError] if the error code is unknown.
     # @return [Hash] The error details.
     def self.[](symbol)
-      ERROR_CODES[symbol] or raise ArgumentError, "Unknown error code: #{symbol}"
+      ERROR_CODES[symbol] or raise ArgumentError, "Unknown error symbol: #{symbol}"
+    end
+
+    # Retrieve error details by code.
+    #
+    # @param code [Integer] The error code.
+    # @return [Hash, nil] The error details hash if found, otherwise nil.
+    def self.find_by_code(code)
+      ERROR_CODES.values.find { |details| details[:code] == code }
     end
 
     # Build an error hash, allowing custom message or data to override defaults.

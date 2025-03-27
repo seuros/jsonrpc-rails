@@ -1,9 +1,7 @@
 # frozen_string_literal: true
 
-# Load Rails integration (Railtie, Middleware, etc.)
-require_relative "jsonrpc_rails/rails"
+require_relative "jsonrpc_rails/railtie"
 
-# Load core JSON-RPC classes (Request, Response, Error, Notification)
 require_relative "json_rpc/json_rpc_error"
 require_relative "json_rpc/request"
 require_relative "json_rpc/response"
