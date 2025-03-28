@@ -44,12 +44,12 @@ class JSON_RPC_Rails::Middleware::ValidatorTest < Minitest::Test
     assert_nil @mock_app.last_env[JSON_RPC_Rails::Middleware::Validator::ENV_PAYLOAD_KEY]
   end
 
-  def test_invalid_json_returns_parse_error
+  def test_invalid_json_passes_through
+    # Unparsable JSON should skip validation and pass through
     post "/", '{"jsonrpc": "2.0", "method": "test", "params": [1, 2', { "CONTENT_TYPE" => "application/json" }
-    assert_equal 400, last_response.status
-    assert_equal "application/json", last_response.content_type
-    expected_error = { "jsonrpc" => "2.0", "error" => { "code" => -32700, "message" => "Parse error" }, "id" => nil }
-    assert_equal expected_error, JSON.parse(last_response.body)
+    assert last_response.ok? # Should pass through to mock app
+    assert_equal "OK", last_response.body
+    assert_nil @mock_app.last_env[JSON_RPC_Rails::Middleware::Validator::ENV_PAYLOAD_KEY] # No payload stored
   end
 
   def test_valid_single_request_passes_through
@@ -63,23 +63,34 @@ class JSON_RPC_Rails::Middleware::ValidatorTest < Minitest::Test
     assert_equal payload, @mock_app.last_env[JSON_RPC_Rails::Middleware::Validator::ENV_PAYLOAD_KEY]
   end
 
-  def test_single_request_invalid_structure_returns_error
-    invalid_payloads = [
-      { "method" => "foo", "id" => 1 },                                  # Missing jsonrpc
+  def test_single_request_invalid_structure
+    # Payloads with 'jsonrpc' but failing strict validation should return 400
+    invalid_rpc_payloads = [
       { "jsonrpc" => "1.0", "method" => "foo", "id" => 1 },               # Wrong jsonrpc version
       { "jsonrpc" => "2.0", "id" => 1 },                                  # Missing method
       { "jsonrpc" => "2.0", "method" => 123, "id" => 1 },                 # Method not a string
       { "jsonrpc" => "2.0", "method" => "foo", "params" => 123, "id" => 1 }, # Params not array/object
       { "jsonrpc" => "2.0", "method" => "foo", "id" => {} }               # ID not string/number/null
     ]
+    # Payloads missing 'jsonrpc' should pass through
+    passthrough_payloads = [
+      { "method" => "foo", "id" => 1 }                                  # Missing jsonrpc
+    ]
 
     expected_error_body = { "jsonrpc" => "2.0", "error" => { "code" => -32600, "message" => "Invalid Request" }, "id" => nil }
 
-    invalid_payloads.each do |payload|
+    invalid_rpc_payloads.each do |payload|
       post "/", payload.to_json, { "CONTENT_TYPE" => "application/json" }
-      assert_equal 400, last_response.status, "Failed for payload: #{payload.inspect}"
-      assert_equal "application/json", last_response.content_type, "Failed for payload: #{payload.inspect}"
-      assert_equal expected_error_body, JSON.parse(last_response.body), "Failed for payload: #{payload.inspect}"
+      assert_equal 400, last_response.status, "[Should Fail] Failed for payload: #{payload.inspect}"
+      assert_equal "application/json", last_response.content_type, "[Should Fail] Failed for payload: #{payload.inspect}"
+      assert_equal expected_error_body, JSON.parse(last_response.body), "[Should Fail] Failed for payload: #{payload.inspect}"
+    end
+
+    passthrough_payloads.each do |payload|
+      post "/", payload.to_json, { "CONTENT_TYPE" => "application/json" }
+      assert last_response.ok?, "[Should Pass Through] Failed for payload: #{payload.inspect}"
+      assert_equal "OK", last_response.body, "[Should Pass Through] Failed for payload: #{payload.inspect}"
+      assert_nil @mock_app.last_env[JSON_RPC_Rails::Middleware::Validator::ENV_PAYLOAD_KEY], "[Should Pass Through] Failed for payload: #{payload.inspect}"
     end
   end
 
@@ -110,14 +121,13 @@ class JSON_RPC_Rails::Middleware::ValidatorTest < Minitest::Test
     assert_equal payload, @mock_app.last_env[JSON_RPC_Rails::Middleware::Validator::ENV_PAYLOAD_KEY]
   end
 
-  def test_empty_batch_request_returns_error
+  def test_empty_batch_request_passes_through
+    # Empty batch does not meet criteria (all Hashes AND any jsonrpc), should pass through
     payload = []
-    expected_error_body = { "jsonrpc" => "2.0", "error" => { "code" => -32600, "message" => "Invalid Request" }, "id" => nil }
-
     post "/", payload.to_json, { "CONTENT_TYPE" => "application/json" }
-    assert_equal 400, last_response.status
-    assert_equal "application/json", last_response.content_type
-    assert_equal expected_error_body, JSON.parse(last_response.body)
+    assert last_response.ok? # Should pass through
+    assert_equal "OK", last_response.body
+    assert_nil @mock_app.last_env[JSON_RPC_Rails::Middleware::Validator::ENV_PAYLOAD_KEY]
   end
 
   def test_batch_with_invalid_element_returns_error
@@ -147,9 +157,10 @@ class JSON_RPC_Rails::Middleware::ValidatorTest < Minitest::Test
     assert_equal payload, @mock_app.last_env[JSON_RPC_Rails::Middleware::Validator::ENV_PAYLOAD_KEY]
   end
 
-  def test_batch_with_invalid_element_structure_returns_error
-    invalid_batch_payloads = [
-      # Batch containing an element missing jsonrpc
+  def test_batch_with_invalid_element_structure
+    # Batches that trigger validation (all Hashes, any jsonrpc) but contain an invalid element should error
+    invalid_rpc_batches = [
+      # Batch containing an element missing jsonrpc (but another element has it, triggering validation)
       [ { "jsonrpc" => "2.0", "method" => "valid" }, { "method" => "invalid", "id" => 1 } ],
       # Batch containing an element with wrong jsonrpc version
       [ { "jsonrpc" => "2.0", "method" => "valid" }, { "jsonrpc" => "1.0", "method" => "invalid", "id" => 2 } ],
@@ -164,15 +175,29 @@ class JSON_RPC_Rails::Middleware::ValidatorTest < Minitest::Test
       # Batch containing an element with extraneous key
       [ { "jsonrpc" => "2.0", "method" => "valid" }, { "jsonrpc" => "2.0", "method" => "invalid", "id" => 6, "extra" => true } ]
     ]
+    # Batches that do NOT trigger validation should pass through
+    passthrough_batches = [
+      # Array contains non-hash element
+      [ { "jsonrpc" => "2.0", "method" => "valid" }, "not a hash" ],
+      # Array contains only hashes, but NONE have 'jsonrpc' key
+      [ { "method" => "foo", "id" => 1 }, { "method" => "bar", "id" => 2 } ]
+    ]
+
 
     expected_error_body = { "jsonrpc" => "2.0", "error" => { "code" => -32600, "message" => "Invalid Request" }, "id" => nil }
 
-    invalid_batch_payloads.each do |payload|
+    invalid_rpc_batches.each do |payload|
       post "/", payload.to_json, { "CONTENT_TYPE" => "application/json" }
-      assert_equal 400, last_response.status, "Failed for payload: #{payload.inspect}"
-      assert_equal "application/json", last_response.content_type, "Failed for payload: #{payload.inspect}"
-      # For batch validation errors, a single error response with id: null is expected.
-      assert_equal expected_error_body, JSON.parse(last_response.body), "Failed for payload: #{payload.inspect}"
+      assert_equal 400, last_response.status, "[Should Fail] Failed for payload: #{payload.inspect}"
+      assert_equal "application/json", last_response.content_type, "[Should Fail] Failed for payload: #{payload.inspect}"
+      assert_equal expected_error_body, JSON.parse(last_response.body), "[Should Fail] Failed for payload: #{payload.inspect}"
+    end
+
+    passthrough_batches.each do |payload|
+       post "/", payload.to_json, { "CONTENT_TYPE" => "application/json" }
+       assert last_response.ok?, "[Should Pass Through] Failed for payload: #{payload.inspect}"
+       assert_equal "OK", last_response.body, "[Should Pass Through] Failed for payload: #{payload.inspect}"
+       assert_nil @mock_app.last_env[JSON_RPC_Rails::Middleware::Validator::ENV_PAYLOAD_KEY], "[Should Pass Through] Failed for payload: #{payload.inspect}"
     end
   end
 end

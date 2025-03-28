@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "json"
+require "active_support/json" # Add this require
 
 module JSON_RPC_Rails
   module Middleware
@@ -37,20 +38,36 @@ module JSON_RPC_Rails
         payload = parse_json(body)
 
         # Handle JSON parsing errors
-        return jsonrpc_error_response(:parse_error) unless payload
+        # If parsing fails (returns nil), pass through
+        return @app.call(env) unless payload
 
-        # Only attempt JSON-RPC validation if payload is a Hash or Array
-        unless payload.is_a?(Hash) || payload.is_a?(Array)
-          # Pass through other valid JSON types (string, number, boolean, null)
-          return @app.call(env)
+        # Determine if we should proceed with strict validation based on payload type and content
+        should_validate = false
+        is_batch = false
+
+        case payload
+        when Hash
+          # Validate single Hash only if 'jsonrpc' key is present
+          should_validate = payload.key?("jsonrpc")
+          is_batch = false
+        when Array
+          # Validate Array only if ALL elements are Hashes AND at least one has 'jsonrpc' key
+          all_hashes = payload.all? { |el| el.is_a?(Hash) }
+          any_jsonrpc = payload.any? { |el| el.is_a?(Hash) && el.key?("jsonrpc") }
+          if all_hashes && any_jsonrpc
+            should_validate = true
+            is_batch = true
+          end
+          # Note: Empty arrays or arrays not meeting the criteria will pass through
         end
 
-        # Payload is Hash or Array, proceed with JSON-RPC validation
-        is_batch = payload.is_a?(Array)
-        # validate_batch handles the empty array case internally now
+        # If conditions for validation are not met, pass through
+        return @app.call(env) unless should_validate
+
+        # --- Proceed with strict validation ---
         validation_result, _ = is_batch ? validate_batch(payload) : validate_single(payload)
 
-        # If validation failed, return the generated error response
+        # If strict validation failed (e.g., wrong version, missing method, invalid batch element), return the error
         return validation_result unless validation_result == :valid
 
         # Store the validated payload (original structure) in env for the controller
@@ -62,14 +79,13 @@ module JSON_RPC_Rails
 
       private
 
-      # Removed jsonrpc_payload? method
-
-      # Parses the JSON body string. Returns parsed data or nil on failure.
+      # Parses the JSON body string using ActiveSupport::JSON. Returns parsed data or nil on failure.
       def parse_json(body)
         return nil if body.nil? || body.strip.empty?
 
-        JSON.parse(body)
-      rescue JSON::ParserError
+        ActiveSupport::JSON.decode(body)
+      rescue ActiveSupport::JSON.parse_error
+        # Return nil if parsing fails, allowing the request to pass through
         nil
       end
 
@@ -152,11 +168,10 @@ module JSON_RPC_Rails
                       JSON_RPC::JsonRpcError.new(error_type)
         end
 
-        response_body = {
-          jsonrpc: "2.0",
+        response_body = JSON_RPC::Response.new(
+          id: nil, # Middleware errors have null id
           error: error_obj.to_h,
-          id: nil # Middleware errors have null id
-        }.to_json
+        ).to_json
 
         [
           status,
