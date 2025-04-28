@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    jsonrpc-rails (0.1.1)
+    jsonrpc-rails (0.2.0)
       railties (>= 8.0.1)
 
 GEM
