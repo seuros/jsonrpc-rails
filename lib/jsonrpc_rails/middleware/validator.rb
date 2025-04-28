@@ -18,7 +18,7 @@ module JSON_RPC_Rails
     # Other valid JSON payloads (e.g., strings, numbers, booleans, null) are passed through.
     class Validator
       CONTENT_TYPE = "application/json"
-      ENV_PAYLOAD_KEY = "jsonrpc.payload"
+      ENV_PAYLOAD_KEY = :"jsonrpc.payload"
 
       def initialize(app)
         @app = app

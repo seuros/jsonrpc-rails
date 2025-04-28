@@ -29,7 +29,7 @@ class TestingController < ApplicationController
     # This action is hit only if the JSON-RPC Validator middleware passes the request.
     # We return a valid JSON-RPC success response, using the ID from the request.
     # The middleware stores the parsed payload (Hash or Array) in the env.
-    payload = request.env["jsonrpc.payload"]
+    payload = request.env[:"jsonrpc.payload"]
 
     # For simplicity in this test endpoint, we'll just handle single requests for ID extraction.
     # A real endpoint would need more robust handling for batch requests.
