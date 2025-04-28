@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "json"
-require "active_support/json" # Add this require
+require "active_support/json"
 
 module JSON_RPC_Rails
   module Middleware
@@ -25,16 +25,14 @@ module JSON_RPC_Rails
       end
 
       def call(env)
-        request = Rack::Request.new(env)
-
         # Only process POST requests with the correct Content-Type
-        unless request.post? && request.content_type&.start_with?(CONTENT_TYPE)
-          return @app.call(env)
-        end
+        return @app.call(env) unless env["REQUEST_METHOD"] == "POST" &&
+                                     env["CONTENT_TYPE"]&.start_with?(CONTENT_TYPE)
 
         # Read and parse the request body
-        body = request.body.read
-        request.body.rewind # Rewind body for potential downstream middleware/apps
+        # Safely read and rewind
+        body = env['rack.input'].read
+        env['rack.input'].rewind
         payload = parse_json(body)
 
         # Handle JSON parsing errors
