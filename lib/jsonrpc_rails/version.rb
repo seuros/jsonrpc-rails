@@ -1,3 +1,3 @@
-module JSON_RPC_Rails
+module JSONRPC_Rails
     VERSION = "0.1.1"
 end

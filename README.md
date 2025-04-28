@@ -10,7 +10,7 @@ It integrates into Rails, allowing you to render JSON-RPC responses and validate
 - **Rails Integration:** Easily integrate JSON-RPC 2.0 support via a Rails Railtie.
 - **Custom Renderer:** Render responses with `render jsonrpc:`, automatically wrapping data in the JSON-RPC 2.0 envelope.
 - **Error Handling:** Built-in support for both success and error responses according to the JSON-RPC 2.0 specification.
-- **Request Validation:** Includes middleware (`JSON_RPC_Rails::Middleware::Validator`) to strictly validate incoming JSON-RPC 2.0 requests (single and batch) against the specification structure.
+- **Request Validation:** Includes middleware (`JSONRPC_Rails::Middleware::Validator`) to strictly validate incoming JSON-RPC 2.0 requests (single and batch) against the specification structure.
 - **Rails 8+ Compatibility:** Designed specifically for Rails 8 and later versions.
 
 ## Installation
@@ -81,7 +81,7 @@ You can override the default `message` or add `data` for either method by provid
 
 ### Handling Requests
 
-The gem automatically inserts `JSON_RPC_Rails::Middleware::Validator` into your application's middleware stack. This middleware performs the following actions for incoming **POST** requests with `Content-Type: application/json`:
+The gem automatically inserts `JSONRPC_Rails::Middleware::Validator` into your application's middleware stack. This middleware performs the following actions for incoming **POST** requests with `Content-Type: application/json`:
 
 1.  **Parses** the JSON body. Returns a JSON-RPC `Parse error (-32700)` if parsing fails.
 2.  **Validates** the structure against the JSON-RPC 2.0 specification (single or batch). It performs strict validation, ensuring `jsonrpc: "2.0"`, a string `method`, optional `params` (array/object), optional `id` (string/number/null), and **no extraneous keys**. Returns a JSON-RPC `Invalid Request (-32600)` error if validation fails. **Note:** For batch requests, if *any* individual request within the batch is structurally invalid, the entire batch is rejected with a single `Invalid Request (-32600)` error.

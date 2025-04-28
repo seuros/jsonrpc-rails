@@ -1,12 +1,12 @@
 require_relative "middleware/validator"
 
-module JSON_RPC_Rails
+module JSONRPC_Rails
   # Use Rails::Railtie to integrate with the Rails application
   class Railtie < Rails::Railtie
     # Insert the JSON-RPC Validator middleware early in the stack.
     # Inserting before Rack::Sendfile, which is typically present early in the stack.
     initializer "jsonrpc-rails.add_validator_middleware" do |app|
-      app.middleware.use JSON_RPC_Rails::Middleware::Validator
+      app.middleware.use JSONRPC_Rails::Middleware::Validator
     end
 
     initializer "jsonrpc-rails.add_renderers" do

@@ -3,7 +3,7 @@
 require "json"
 require "active_support/json"
 
-module JSON_RPC_Rails
+module JSONRPC_Rails
   module Middleware
     # Rack middleware to strictly validate incoming JSON-RPC 2.0 requests.
     # It checks for correct Content-Type, parses JSON, and validates the structure

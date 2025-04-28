@@ -15,13 +15,13 @@ class MockApp
   attr_reader :last_env
 end
 
-class JSON_RPC_Rails::Middleware::ValidatorTest < Minitest::Test
+class JSONRPC_Rails::Middleware::ValidatorTest < Minitest::Test
   include Rack::Test::Methods
 
   def setup
     @mock_app = MockApp.new
     # Build the Rack app stack with the validator middleware
-    @app = JSON_RPC_Rails::Middleware::Validator.new(@mock_app)
+    @app = JSONRPC_Rails::Middleware::Validator.new(@mock_app)
   end
 
   def app
@@ -34,14 +34,14 @@ class JSON_RPC_Rails::Middleware::ValidatorTest < Minitest::Test
     get "/"
     assert last_response.ok?
     assert_equal "OK", last_response.body
-    assert_nil @mock_app.last_env[JSON_RPC_Rails::Middleware::Validator::ENV_PAYLOAD_KEY]
+    assert_nil @mock_app.last_env[JSONRPC_Rails::Middleware::Validator::ENV_PAYLOAD_KEY]
   end
 
   def test_post_without_json_content_type_passes_through
     post "/", { data: "value" }.to_json, { "CONTENT_TYPE" => "text/plain" }
     assert last_response.ok?
     assert_equal "OK", last_response.body
-    assert_nil @mock_app.last_env[JSON_RPC_Rails::Middleware::Validator::ENV_PAYLOAD_KEY]
+    assert_nil @mock_app.last_env[JSONRPC_Rails::Middleware::Validator::ENV_PAYLOAD_KEY]
   end
 
   def test_invalid_json_passes_through
@@ -49,7 +49,7 @@ class JSON_RPC_Rails::Middleware::ValidatorTest < Minitest::Test
     post "/", '{"jsonrpc": "2.0", "method": "test", "params": [1, 2', { "CONTENT_TYPE" => "application/json" }
     assert last_response.ok? # Should pass through to mock app
     assert_equal "OK", last_response.body
-    assert_nil @mock_app.last_env[JSON_RPC_Rails::Middleware::Validator::ENV_PAYLOAD_KEY] # No payload stored
+    assert_nil @mock_app.last_env[JSONRPC_Rails::Middleware::Validator::ENV_PAYLOAD_KEY] # No payload stored
   end
 
   def test_valid_single_request_passes_through
@@ -59,8 +59,8 @@ class JSON_RPC_Rails::Middleware::ValidatorTest < Minitest::Test
     assert last_response.ok?, "Expected OK response, got #{last_response.status}"
     assert_equal "OK", last_response.body
     # Verify payload is stored in env for the downstream app
-    refute_nil @mock_app.last_env[JSON_RPC_Rails::Middleware::Validator::ENV_PAYLOAD_KEY]
-    assert_equal payload, @mock_app.last_env[JSON_RPC_Rails::Middleware::Validator::ENV_PAYLOAD_KEY]
+    refute_nil @mock_app.last_env[JSONRPC_Rails::Middleware::Validator::ENV_PAYLOAD_KEY]
+    assert_equal payload, @mock_app.last_env[JSONRPC_Rails::Middleware::Validator::ENV_PAYLOAD_KEY]
   end
 
   def test_single_request_invalid_structure
@@ -90,7 +90,7 @@ class JSON_RPC_Rails::Middleware::ValidatorTest < Minitest::Test
       post "/", payload.to_json, { "CONTENT_TYPE" => "application/json" }
       assert last_response.ok?, "[Should Pass Through] Failed for payload: #{payload.inspect}"
       assert_equal "OK", last_response.body, "[Should Pass Through] Failed for payload: #{payload.inspect}"
-      assert_nil @mock_app.last_env[JSON_RPC_Rails::Middleware::Validator::ENV_PAYLOAD_KEY], "[Should Pass Through] Failed for payload: #{payload.inspect}"
+      assert_nil @mock_app.last_env[JSONRPC_Rails::Middleware::Validator::ENV_PAYLOAD_KEY], "[Should Pass Through] Failed for payload: #{payload.inspect}"
     end
   end
 
@@ -117,8 +117,8 @@ class JSON_RPC_Rails::Middleware::ValidatorTest < Minitest::Test
     assert last_response.ok?, "Expected OK response, got #{last_response.status}"
     assert_equal "OK", last_response.body
     # Verify payload is stored in env
-    refute_nil @mock_app.last_env[JSON_RPC_Rails::Middleware::Validator::ENV_PAYLOAD_KEY]
-    assert_equal payload, @mock_app.last_env[JSON_RPC_Rails::Middleware::Validator::ENV_PAYLOAD_KEY]
+    refute_nil @mock_app.last_env[JSONRPC_Rails::Middleware::Validator::ENV_PAYLOAD_KEY]
+    assert_equal payload, @mock_app.last_env[JSONRPC_Rails::Middleware::Validator::ENV_PAYLOAD_KEY]
   end
 
   def test_empty_batch_request_passes_through
@@ -127,7 +127,7 @@ class JSON_RPC_Rails::Middleware::ValidatorTest < Minitest::Test
     post "/", payload.to_json, { "CONTENT_TYPE" => "application/json" }
     assert last_response.ok? # Should pass through
     assert_equal "OK", last_response.body
-    assert_nil @mock_app.last_env[JSON_RPC_Rails::Middleware::Validator::ENV_PAYLOAD_KEY]
+    assert_nil @mock_app.last_env[JSONRPC_Rails::Middleware::Validator::ENV_PAYLOAD_KEY]
   end
 
   def test_batch_with_invalid_element_returns_error
@@ -153,8 +153,8 @@ class JSON_RPC_Rails::Middleware::ValidatorTest < Minitest::Test
     # Assert it behaves like a valid single request
     assert last_response.ok?, "Expected OK response, got #{last_response.status}"
     assert_equal "OK", last_response.body
-    refute_nil @mock_app.last_env[JSON_RPC_Rails::Middleware::Validator::ENV_PAYLOAD_KEY]
-    assert_equal payload, @mock_app.last_env[JSON_RPC_Rails::Middleware::Validator::ENV_PAYLOAD_KEY]
+    refute_nil @mock_app.last_env[JSONRPC_Rails::Middleware::Validator::ENV_PAYLOAD_KEY]
+    assert_equal payload, @mock_app.last_env[JSONRPC_Rails::Middleware::Validator::ENV_PAYLOAD_KEY]
   end
 
   def test_batch_with_invalid_element_structure
@@ -197,7 +197,7 @@ class JSON_RPC_Rails::Middleware::ValidatorTest < Minitest::Test
        post "/", payload.to_json, { "CONTENT_TYPE" => "application/json" }
        assert last_response.ok?, "[Should Pass Through] Failed for payload: #{payload.inspect}"
        assert_equal "OK", last_response.body, "[Should Pass Through] Failed for payload: #{payload.inspect}"
-       assert_nil @mock_app.last_env[JSON_RPC_Rails::Middleware::Validator::ENV_PAYLOAD_KEY], "[Should Pass Through] Failed for payload: #{payload.inspect}"
+       assert_nil @mock_app.last_env[JSONRPC_Rails::Middleware::Validator::ENV_PAYLOAD_KEY], "[Should Pass Through] Failed for payload: #{payload.inspect}"
     end
   end
 end

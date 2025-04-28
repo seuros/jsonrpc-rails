@@ -8,6 +8,6 @@ require_relative "json_rpc/response"
 require_relative "json_rpc/notification"
 
 # Define the top-level module for the gem (optional, but good practice)
-module JSON_RPC_Rails
+module JSONRPC_Rails
   # You might add gem-level configuration or methods here if needed later.
 end

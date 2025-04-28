@@ -2,7 +2,7 @@ require_relative "lib/jsonrpc_rails/version"
 
 Gem::Specification.new do |spec|
   spec.name        = "jsonrpc-rails"
-  spec.version     = JSON_RPC_Rails::VERSION
+  spec.version     = JSONRPC_Rails::VERSION
   spec.authors     = [ "Abdelkader Boudih" ]
   spec.email       = [ "terminale@gmail.com" ]
   spec.homepage    = "https://github.com/seuros/jsonrpc-rails"
