@@ -108,8 +108,8 @@ module JSON_RPC_Rails
           return false
         end
 
-        # Optional 'id' must be a String, Number (Integer/Float), or Null if present
-        if obj.key?("id") && ![ String, Integer, Float, NilClass ].include?(obj["id"].class)
+        # Optional 'id' must be a String, Number (Integer), or Null if present
+        if obj.key?("id") && ![ String, Integer, NilClass ].include?(obj["id"].class)
           return false
         end
 
