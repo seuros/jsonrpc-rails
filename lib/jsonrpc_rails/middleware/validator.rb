@@ -31,8 +31,8 @@ module JSONRPC_Rails
 
         # Read and parse the request body
         # Safely read and rewind
-        body = env['rack.input'].read
-        env['rack.input'].rewind
+        body = env["rack.input"].read
+        env["rack.input"].rewind
         payload = parse_json(body)
 
         # Handle JSON parsing errors

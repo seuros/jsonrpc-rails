@@ -1,0 +1,9 @@
+{
+  "packages": {
+    ".": {
+      "release-type": "ruby",
+      "package-name": "jsonrpc-rails",
+      "initial-version": "0.1.1"
+    }
+  }
+}
