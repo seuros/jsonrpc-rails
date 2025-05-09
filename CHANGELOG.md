@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/seuros/jsonrpc-rails/compare/jsonrpc-rails/v0.2.0...jsonrpc-rails/v0.3.0) (2025-05-09)
+
+
+### Features
+
+* make Validator opt-in by path ([#2](https://github.com/seuros/jsonrpc-rails/issues/2)) ([ea7eab6](https://github.com/seuros/jsonrpc-rails/commit/ea7eab69e6fe0be1d18fb574099fd461b41ac7cc))
+
 ## [0.2.0](https://github.com/seuros/jsonrpc-rails/compare/jsonrpc-rails-v0.1.1...jsonrpc-rails/v0.2.0) (2025-04-28)
 
 
