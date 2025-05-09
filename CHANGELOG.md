@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/seuros/jsonrpc-rails/compare/jsonrpc-rails/v0.3.0...jsonrpc-rails/v0.3.1) (2025-05-09)
+
+
+### Bug Fixes
+
+* set version file ([6023d71](https://github.com/seuros/jsonrpc-rails/commit/6023d71d93bd9b7e5f9ce6e947ce147a77f68418))
+
 ## [0.3.0](https://github.com/seuros/jsonrpc-rails/compare/jsonrpc-rails/v0.2.0...jsonrpc-rails/v0.3.0) (2025-05-09)
 
 
