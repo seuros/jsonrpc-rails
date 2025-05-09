@@ -18,12 +18,10 @@ module Dummy
     # Common ones are `templates`, `generators`, or `middleware`, for example.
     config.autoload_lib(ignore: %w[assets tasks])
 
-    # Configuration for the application, engines, and railties goes here.
-    #
-    # These settings can be overridden in specific environments using the files
-    # in config/environments, which are processed later.
-    #
-    # config.time_zone = "Central Time (US & Canada)"
-    # config.eager_load_paths << Rails.root.join("extras")
+    config.jsonrpc_rails.validated_paths = [
+      "/rpc",                            # exact
+      %r{\A/api/v\d+/rpc\z},                 # regex
+      ->(p) { p.start_with?("/rpc/private") }# lambda
+    ]
   end
 end
