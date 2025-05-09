@@ -155,6 +155,22 @@ class TestingControllerTest < ActionDispatch::IntegrationTest
     assert_nil json_response["id"] # request_id will be nil in the controller
   end
 
+  test "POST /api/v1/rpc validates via regex" do
+    payload = { jsonrpc: "2.0", method: "noop", id: 22 }.to_json
+    post "/api/v1/rpc", params: payload, headers: { "Content-Type" => "application/json" }
+
+    assert_response :ok
+    assert_equal 22, @response.parsed_body["id"]
+  end
+
+  test "POST /rpc/private/echo validates via lambda" do
+    payload = { jsonrpc: "2.0", method: "noop", id: 23 }.to_json
+    post "/rpc/private/echo", params: payload, headers: { "Content-Type" => "application/json" }
+
+    assert_response :ok
+    assert_equal 23, @response.parsed_body["id"]
+  end
+
   test "GET /rpc is passed through (results in 404)" do
     get "/rpc"
 

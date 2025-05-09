@@ -7,4 +7,6 @@ Rails.application.routes.draw do
 
   # Route for testing JSON-RPC POST requests via middleware
   post "/rpc", to: "testing#rpc_endpoint"
+  post "/api/v1/rpc",     to: "testing#rpc_endpoint"
+  post "/rpc/private/echo", to: "testing#rpc_endpoint"
 end

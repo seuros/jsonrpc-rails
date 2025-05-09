@@ -15,13 +15,14 @@ class MockApp
   attr_reader :last_env
 end
 
-class JSONRPC_Rails::Middleware::ValidatorTest < Minitest::Test
+class JSONRPC_Rails::Middleware::ValidatorTest < ActiveSupport::TestCase
+  # Include Rack::Test methods for testing middleware
   include Rack::Test::Methods
 
   def setup
     @mock_app = MockApp.new
     # Build the Rack app stack with the validator middleware
-    @app = JSONRPC_Rails::Middleware::Validator.new(@mock_app)
+    @app = JSONRPC_Rails::Middleware::Validator.new(@mock_app, %r{\A/})
   end
 
   def app
@@ -155,6 +156,31 @@ class JSONRPC_Rails::Middleware::ValidatorTest < Minitest::Test
     assert_equal "OK", last_response.body
     refute_nil @mock_app.last_env[JSONRPC_Rails::Middleware::Validator::ENV_PAYLOAD_KEY]
     assert_equal payload, @mock_app.last_env[JSONRPC_Rails::Middleware::Validator::ENV_PAYLOAD_KEY]
+  end
+
+  def build_validator(paths)
+    JSONRPC_Rails::Middleware::Validator.new(@mock_app, paths)
+  end
+
+  def test_exact_string_match
+    @app = build_validator([ "/rpc" ])
+    post "/rpc",  { jsonrpc: "2.0", method: "ping" }.to_json,
+         { "CONTENT_TYPE" => "application/json" }
+    assert last_response.ok?
+  end
+
+  def test_regex_match
+    @app = build_validator([ %r{\A/api/v\d+/rpc\z} ])
+    post "/api/v2/rpc", { jsonrpc: "2.0", method: "ping" }.to_json,
+         { "CONTENT_TYPE" => "application/json" }
+    assert last_response.ok?
+  end
+
+  def test_lambda_match
+    @app = build_validator([ ->(p) { p.start_with?("/rpc/private") } ])
+    post "/rpc/private/foo", { jsonrpc: "2.0", method: "ping" }.to_json,
+         { "CONTENT_TYPE" => "application/json" }
+    assert last_response.ok?
   end
 
   def test_batch_with_invalid_element_structure

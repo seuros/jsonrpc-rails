@@ -38,6 +38,22 @@ gem install jsonrpc-rails
 ### Rendering Responses
 
 Once installed, **jsonrpc-rails** registers a custom renderer with Rails. 
+
+Enable validation where you need it
+
+Add this to config/application.rb (or an environment file):
+```ruby
+# Validate only the JSON‑RPC endpoints you expose
+config.jsonrpc_rails.validated_paths = [
+"/rpc",                    # exact string
+%r{\A/api/v\d+/rpc\z},     # regexp
+->(p) { p.start_with? "/rpc/private" } # lambda / proc
+]
+```
+
+Leave the array empty (default) and the middleware is effectively off.
+Use [/.*\z/] if you really want it on everywhere.
+
 In your controllers, you can render JSON-RPC responses like so:
 
 ```ruby

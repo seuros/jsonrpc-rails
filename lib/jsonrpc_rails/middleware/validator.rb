@@ -20,11 +20,15 @@ module JSONRPC_Rails
       CONTENT_TYPE = "application/json"
       ENV_PAYLOAD_KEY = :"jsonrpc.payload"
 
-      def initialize(app)
+      def initialize(app, paths = nil)
         @app = app
+
+        @paths = Array(paths || Rails.configuration.jsonrpc_rails.validated_paths)
       end
 
       def call(env)
+        return @app.call(env) unless validate_path?(env["PATH_INFO"])
+
         # Only process POST requests with the correct Content-Type
         return @app.call(env) unless env["REQUEST_METHOD"] == "POST" &&
                                      env["CONTENT_TYPE"]&.start_with?(CONTENT_TYPE)
@@ -85,6 +89,19 @@ module JSONRPC_Rails
       rescue ActiveSupport::JSON.parse_error
         # Return nil if parsing fails, allowing the request to pass through
         nil
+      end
+
+      def validate_path?(path)
+        return false if @paths.empty?
+
+        @paths.any? do |m|
+          case m
+          when String then path == m
+          when Regexp then m.match?(path)
+          when Proc   then m.call(path)
+          else             false
+          end
+        end
       end
 
       # Performs strict validation on a single object to ensure it conforms
