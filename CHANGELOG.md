@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/seuros/jsonrpc-rails/compare/jsonrpc-rails/v0.5.0...jsonrpc-rails/v0.5.1) (2025-05-10)
+
+
+### Bug Fixes
+
+* rename jsonrpc to jsonrpc_params ([abf585c](https://github.com/seuros/jsonrpc-rails/commit/abf585cfa7d57bf70381e0248f2a8f478b18fd47))
+
 ## [0.5.0](https://github.com/seuros/jsonrpc-rails/compare/jsonrpc-rails/v0.4.0...jsonrpc-rails/v0.5.0) (2025-05-10)
 
 
