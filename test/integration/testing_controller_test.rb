@@ -42,9 +42,9 @@ class TestingControllerTest < ActionDispatch::IntegrationTest
 
     json_response = response.parsed_body
     assert_equal "2.0", json_response["jsonrpc"]
+    assert_equal 5, json_response["id"]
     # Uses code from option, default message from JSON_RPC::JsonRpcError
     assert_equal({ "code" => -32_600, "message" => "Invalid Request" }, json_response["error"])
-    assert_equal 5, json_response["id"]
   end
 
   test "renders a valid JSON-RPC error response using a numeric code with overrides" do
@@ -184,5 +184,47 @@ class TestingControllerTest < ActionDispatch::IntegrationTest
     # Middleware ignores GET requests. Rails routing handles it.
     # Since we only defined POST /rpc, GET should result in Not Found.
     assert_response :not_found # 404
+  end
+
+  test "Test Response Object" do
+    get "/render_response"
+    assert_response :success
+
+    json_response = response.parsed_body
+    assert_equal "2.0", json_response["jsonrpc"]
+    assert_equal "ok", json_response["result"]
+    assert_equal 1, json_response["id"]
+  end
+
+  test "Test Notification Object" do
+    get "/render_notification"
+    assert_response :success
+
+    json_response = response.parsed_body
+    assert_equal "2.0", json_response["jsonrpc"]
+    assert_nil json_response["id"]
+    assert_equal "tick", json_response["method"]
+    assert_equal({ "a" => 1, "b" => 2 }, json_response["params"])
+  end
+
+  test "Test Batch Object" do
+    get "/render_batch"
+    assert_response :success
+
+    json_response = response.parsed_body
+    assert_equal 3, json_response.size
+
+    # check each response
+    assert_equal "2.0", json_response[0]["jsonrpc"]
+    assert_equal "ok", json_response[0]["result"]
+    assert_equal 1, json_response[0]["id"]
+
+    assert_equal "2.0", json_response[1]["jsonrpc"]
+    assert_nil json_response[1]["id"]
+    assert_equal "tick", json_response[1]["method"]
+
+    assert_equal "2.0", json_response[2]["jsonrpc"]
+    assert_equal "ok", json_response[2]["result"]
+    assert_equal 2, json_response[2]["id"]
   end
 end
