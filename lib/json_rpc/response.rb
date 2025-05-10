@@ -15,6 +15,10 @@ module JSON_RPC
       super(id: id, result: result, error: error_obj)
     end
 
+    def self.from_h(h)
+      new(id: h["id"], result: h["result"], error: h["error"])
+    end
+
     # Returns a hash representation of the response, ready for JSON serialization.
     #
     # @return [Hash] The hash representation.
@@ -29,6 +33,8 @@ module JSON_RPC
       hash
     end
 
+    def as_json(*) = to_h
+
     private
 
     # Validates the response structure according to JSON-RPC 2.0 spec.
@@ -40,18 +46,16 @@ module JSON_RPC
     def validate_response(id, result, error_input)
       # ID must be present (can be null) in a response matching a request.
 
-      if !error_input.nil? && !result.nil?
-        raise ArgumentError, "Response cannot contain both 'result' and 'error'"
-      end
+      raise ArgumentError, "Response cannot contain both 'result' and 'error'" if !error_input.nil? && !result.nil?
 
       # If id is not null, either result or error MUST be present.
-      if !id.nil? && error_input.nil? && result.nil?
-        # This check assumes if both are nil, it's invalid for non-null id.
-        # `result: nil` is a valid success response. The check should ideally know
-        # if `result` was explicitly passed as nil vs not passed at all.
-        # Data.define might make this tricky. Let's keep the original logic for now.
-        raise ArgumentError, "Response with non-null ID must contain either 'result' or 'error'"
-      end
+      return unless !id.nil? && error_input.nil? && result.nil?
+
+      # This check assumes if both are nil, it's invalid for non-null id.
+      # `result: nil` is a valid success response. The check should ideally know
+      # if `result` was explicitly passed as nil vs not passed at all.
+      # Data.define might make this tricky. Let's keep the original logic for now.
+      raise ArgumentError, "Response with non-null ID must contain either 'result' or 'error'"
     end
 
     # Processes the error input into a standard error hash.

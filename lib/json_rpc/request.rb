@@ -16,6 +16,10 @@ module JSON_RPC
       super
     end
 
+    def self.from_h(h)
+      new(id: h["id"], method: h["method"], params: h["params"])
+    end
+
     # Returns a hash representation of the request, ready for JSON serialization.
     #
     # @return [Hash] The hash representation.
@@ -30,6 +34,8 @@ module JSON_RPC
       hash
     end
 
+    def as_json(*) = to_h
+
     private
 
     # Validates the ID type according to JSON-RPC 2.0 spec.
@@ -38,11 +44,11 @@ module JSON_RPC
     # @param id [Object] The ID to validate.
     # @raise [JSON_RPC::JsonRpcError] if the ID type is invalid.
     def validate_id_type(id)
-      unless id.is_a?(String) || id.is_a?(Numeric) || id.nil?
-        # Using :invalid_request as the error type seems more appropriate for a malformed ID type.
-        raise JSON_RPC::JsonRpcError.new(:invalid_request,
-                                                       message: "ID must be a string, number, or null")
-      end
+      return if id.is_a?(String) || id.is_a?(Numeric) || id.nil?
+
+      # Using :invalid_request as the error type seems more appropriate for a malformed ID type.
+      raise JSON_RPC::JsonRpcError.new(:invalid_request,
+                                       message: "ID must be a string, number, or null")
     end
   end
 end

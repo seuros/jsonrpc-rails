@@ -78,7 +78,7 @@ end
 The renderer wraps your data in the JSON-RPC 2.0 envelope:
 - **Success Response:**
   ```json
-  { "jsonrpc": "2.0", "result": { ... }, "id": 1 }
+  { "jsonrpc": "2.0", "result": { }, "id": 1 }
   ```
 - **Error Response (using numeric code):**
   ```json
@@ -101,59 +101,84 @@ The gem automatically inserts `JSONRPC_Rails::Middleware::Validator` into your a
 
 1.  **Parses** the JSON body. Returns a JSON-RPC `Parse error (-32700)` if parsing fails.
 2.  **Validates** the structure against the JSON-RPC 2.0 specification (single or batch). It performs strict validation, ensuring `jsonrpc: "2.0"`, a string `method`, optional `params` (array/object), optional `id` (string/number/null), and **no extraneous keys**. Returns a JSON-RPC `Invalid Request (-32600)` error if validation fails. **Note:** For batch requests, if *any* individual request within the batch is structurally invalid, the entire batch is rejected with a single `Invalid Request (-32600)` error.
-3.  **Stores** the validated, parsed payload (the original Ruby Hash or Array) in `request.env['jsonrpc.payload']` if validation succeeds.
+3.  **Stores** the validated, parsed payload (the original Ruby Hash or Array) in `request.env[:jsonrpc]` if validation succeeds.
 4.  **Passes** the request to the next middleware or your controller action.
 
 In your controller action, you can access the validated payload like this:
 
 ```ruby
+# app/controllers/my_api_controller.rb
 class MyApiController < ApplicationController
+  # POST /rpc
   def process
-    jsonrpc_payload = request.env['jsonrpc.payload']
+    if jsonrpc_batch?
+      # ── batch ───────────────────────────────────────────────────────────────
+      responses = jsonrpc.filter_map { |req| handle_single_request(req) } # strip nil (notifications)
 
-    if jsonrpc_payload.is_a?(Array)
-      # Handle batch request
-      responses = jsonrpc_payload.map do |request_object|
-        handle_single_request(request_object)
-      end.compact # Remove nil responses from notifications
-      render json: responses, status: (responses.empty? ? :no_content : :ok)
-    else
-      # Handle single request
-      response = handle_single_request(jsonrpc_payload)
-      if response # Check if it was a notification
-        # Use the gem's renderer for consistency
-        render jsonrpc: response[:result], id: response[:id], error: response.key?(:error) ? response[:error] : nil
+      if responses.empty?
+        head :no_content
       else
-        head :no_content # No response for notification
+        # respond with an array of hashes; to_h keeps the structs internal
+        render json: responses.map(&:to_h), status: :ok
+      end
+    else
+      # ── single ──────────────────────────────────────────────────────────────
+      response = handle_single_request(jsonrpc)
+
+      if response # request (has id)
+        render jsonrpc:  response.result,
+               id:       response.id,
+               error:    response.error
+      else        # notification
+        head :no_content
       end
     end
   end
 
   private
 
+  # Map one JSON_RPC::Request|Notification → Response|nil
   def handle_single_request(req)
-    method = req['method']
-    params = req['params']
-    id = req['id'] # Will be nil for notifications
+    # Notifications have id == nil.  Return nil = no response.
+    return nil if req.id.nil?
 
-    result = case method
-             when 'add'
-               params.is_a?(Array) ? params.sum : { code: -32602, message: "Invalid params" }
-             when 'subtract'
-               params.is_a?(Array) && params.size == 2 ? params[0] - params[1] : { code: -32602, message: "Invalid params" }
-             else
-               { code: -32601, message: "Method not found" }
-             end
+    result_or_error =
+            case req.method
+            when "add"
+              add(*Array(req.params))
+            when "subtract"
+              subtract(*Array(req.params))
+            else
+              method_not_found
+            end
 
-    # Only return a response structure if it's a request (has an id)
-    if id
-      if result.is_a?(Hash) && result[:code] # Check if result is an error hash
-        { id: id, error: result }
-      else
-        { id: id, result: result }
-      end
+    build_response(req.id, result_or_error)
+  end
+
+  # ───────────────── helper methods ──────────────────────────────────────────
+  def add(*nums)
+    return invalid_params unless nums.all? { |n| n.is_a?(Numeric) }
+    nums.sum
+  end
+
+  def subtract(a = nil, b = nil)
+    return invalid_params unless a.is_a?(Numeric) && b.is_a?(Numeric)
+    a - b
+  end
+
+  def invalid_params
+    JSON_RPC::JsonRpcError.build(:invalid_params)
+  end
+
+  def method_not_found
+    JSON_RPC::JsonRpcError.build(:method_not_found)
+  end
+
+  def build_response(id, outcome)
+    if outcome.is_a?(JSON_RPC::JsonRpcError)
+      JSON_RPC::Response.new(id: id, error: outcome)
     else
-      nil # No response for notifications
+      JSON_RPC::Response.new(id: id, result: outcome)
     end
   end
 end

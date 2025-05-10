@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require_relative "boot"
 
 require "rails/all"
@@ -19,9 +21,9 @@ module Dummy
     config.autoload_lib(ignore: %w[assets tasks])
 
     config.jsonrpc_rails.validated_paths = [
-      "/rpc",                            # exact
-      %r{\A/api/v\d+/rpc\z},                 # regex
-      ->(p) { p.start_with?("/rpc/private") }# lambda
+      "/rpc", # exact
+      %r{\A/api/v\d+/rpc\z}, # regex
+      ->(p) { p.start_with?("/rpc/private") } # lambda
     ]
   end
 end
