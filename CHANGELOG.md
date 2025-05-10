@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/seuros/jsonrpc-rails/compare/jsonrpc-rails/v0.3.1...jsonrpc-rails/v0.4.0) (2025-05-10)
+
+
+### Features
+
+* return proper data objects ([#5](https://github.com/seuros/jsonrpc-rails/issues/5)) ([ebd9caf](https://github.com/seuros/jsonrpc-rails/commit/ebd9caf2596ab5f4bc23bdea21764be0d5cd3982))
+
 ## [0.3.1](https://github.com/seuros/jsonrpc-rails/compare/jsonrpc-rails/v0.3.0...jsonrpc-rails/v0.3.1) (2025-05-09)
 
 
