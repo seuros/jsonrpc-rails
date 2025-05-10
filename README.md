@@ -111,9 +111,9 @@ In your controller action, you can access the validated payload like this:
 class MyApiController < ApplicationController
   # POST /rpc
   def process
-    if jsonrpc_batch?
+    if jsonrpc_params_batch?
       # ── batch ───────────────────────────────────────────────────────────────
-      responses = jsonrpc.filter_map { |req| handle_single_request(req) } # strip nil (notifications)
+      responses = jsonrpc_params.filter_map { |req| handle_single_request(req) } # strip nil (notifications)
 
       if responses.empty?
         head :no_content
@@ -123,7 +123,7 @@ class MyApiController < ApplicationController
       end
     else
       # ── single ──────────────────────────────────────────────────────────────
-      response = handle_single_request(jsonrpc)
+      response = handle_single_request(jsonrpc_params)
 
       if response # request (has id)
         render jsonrpc:  response.result,

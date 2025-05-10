@@ -7,13 +7,13 @@ module JSONRPC_Rails
     included do
       # Returns a JSON_RPC::Request / Notification / Response
       # or an Array of them for batch calls.
-      def jsonrpc
+      def jsonrpc_params
         request.env[:jsonrpc]
       end
 
       # Convenience boolean
-      def jsonrpc_batch?
-        jsonrpc.is_a?(Array)
+      def jsonrpc_params_batch?
+        jsonrpc_params.is_a?(Array)
       end
     end
   end
