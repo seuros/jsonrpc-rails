@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/seuros/jsonrpc-rails/compare/jsonrpc-rails/v0.4.0...jsonrpc-rails/v0.5.0) (2025-05-10)
+
+
+### Features
+
+* add JSON-RPC response rendering methods and tests ([#7](https://github.com/seuros/jsonrpc-rails/issues/7)) ([45209e7](https://github.com/seuros/jsonrpc-rails/commit/45209e742c4de1508a5862334fd4d23e3316cd0e))
+
 ## [0.4.0](https://github.com/seuros/jsonrpc-rails/compare/jsonrpc-rails/v0.3.1...jsonrpc-rails/v0.4.0) (2025-05-10)
 
 
