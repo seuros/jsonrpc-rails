@@ -22,6 +22,22 @@ class TestingController < ApplicationController
     render jsonrpc: {}, error: -32_600, id: 5 # Invalid Request
   end
 
+  def render_response
+    render jsonrpc: JSON_RPC::Response.new(id: 1, result: "ok")
+  end
+
+  def render_notification
+    render jsonrpc: JSON_RPC::Notification.new(method: "tick", params: { a: 1, b: 2 })
+  end
+
+  def render_batch
+    render jsonrpc: [
+      JSON_RPC::Response.new(id: 1, result: "ok"),
+      JSON_RPC::Notification.new(method: "tick"),
+      JSON_RPC::Response.new(id: 2, result: "ok")
+    ]
+  end
+
   def error_code_with_override
     # Simulate an error using a numeric code and overriding the message/data
     render jsonrpc: { message: "Specific invalid request", data: { field: "xyz" } }, error: -32_600, id: 6
