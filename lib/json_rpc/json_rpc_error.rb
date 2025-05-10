@@ -86,5 +86,8 @@ module JSON_RPC
       hash[:data] = data if data
       hash
     end
+
+    # For ActiveSupport::JSON
+    def as_json(*) = to_h
   end
 end

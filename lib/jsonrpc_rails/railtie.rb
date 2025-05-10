@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require_relative "middleware/validator"
 
 module JSONRPC_Rails
@@ -24,7 +26,8 @@ module JSONRPC_Rails
                              # Build error from symbol, allowing overrides from payload_obj
                              message_override = payload_obj.is_a?(Hash) ? payload_obj[:message] : nil
                              data_override = payload_obj.is_a?(Hash) ? payload_obj[:data] : nil
-                             error_hash = JSON_RPC::JsonRpcError.build(error_input, message: message_override, data: data_override)
+                             error_hash = JSON_RPC::JsonRpcError.build(error_input, message: message_override,
+                                                                                    data: data_override)
                              JSON_RPC::Response.new(id: response_id, error: error_hash)
             when Integer
                              # Build error from numeric code, allowing overrides from payload_obj
@@ -39,7 +42,8 @@ module JSONRPC_Rails
                              error_hash[:data] = data_override if data_override
                              JSON_RPC::Response.new(id: response_id, error: error_hash)
             when ->(ei) { ei } # Catch any other truthy value
-                             raise ArgumentError, "The :error option for render :jsonrpc must be a Symbol or an Integer, got: #{error_input.inspect}"
+                             raise ArgumentError,
+                                   "The :error option for render :jsonrpc must be a Symbol or an Integer, got: #{error_input.inspect}"
             # # Original logic (removed): Treat payload_obj as the error hash
             # JSON_RPC::Response.new(id: response_id, error: payload_obj)
             else # Falsy (nil, false)
@@ -50,7 +54,8 @@ module JSONRPC_Rails
           rescue ArgumentError => e
             # Handle cases where Response initialization fails (e.g., invalid id/result/error combo)
             # Respond with an Internal Error according to JSON-RPC spec
-            internal_error = JSON_RPC::JsonRpcError.new(:internal_error, message: "Server error generating response: #{e.message}")
+            internal_error = JSON_RPC::JsonRpcError.new(:internal_error,
+                                                        message: "Server error generating response: #{e.message}")
             response_payload = { jsonrpc: "2.0", error: internal_error.to_h, id: response_id }
             # Consider logging the error e.message
           rescue JSON_RPC::JsonRpcError => e
@@ -59,11 +64,17 @@ module JSONRPC_Rails
             # Consider logging the error e.message
           end
 
-
           # Set the proper MIME type and convert the hash to JSON.
           self.content_type ||= Mime[:json]
           self.response_body = response_payload.to_json
         end
+      end
+    end
+
+    initializer "jsonrpc-rails.controller_helpers" do
+      ActiveSupport.on_load(:action_controller) do
+        require_relative "controller_helpers"
+        include JSONRPC_Rails::ControllerHelpers
       end
     end
   end

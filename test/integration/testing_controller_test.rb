@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 class TestingControllerTest < ActionDispatch::IntegrationTest
@@ -5,7 +7,7 @@ class TestingControllerTest < ActionDispatch::IntegrationTest
     get "/test"
     assert_response :success
 
-    json_response = @response.parsed_body
+    json_response = response.parsed_body
     assert_equal "2.0", json_response["jsonrpc"]
     assert_equal({ "message" => "Hello from JSON-RPC!" }, json_response["result"])
     assert_equal 1, json_response["id"]
@@ -15,10 +17,10 @@ class TestingControllerTest < ActionDispatch::IntegrationTest
     get "/error_symbol"
     assert_response :success
 
-    json_response = @response.parsed_body
+    json_response = response.parsed_body
     assert_equal "2.0", json_response["jsonrpc"]
     # Fetches code/message from JSON_RPC::JsonRpcError::ERROR_CODES[:method_not_found]
-    assert_equal({ "code" => -32601, "message" => "Method not found" }, json_response["error"])
+    assert_equal({ "code" => -32_601, "message" => "Method not found" }, json_response["error"])
     assert_equal 3, json_response["id"]
   end
 
@@ -26,10 +28,11 @@ class TestingControllerTest < ActionDispatch::IntegrationTest
     get "/error_symbol_override"
     assert_response :success
 
-    json_response = @response.parsed_body
+    json_response = response.parsed_body
     assert_equal "2.0", json_response["jsonrpc"]
     # Uses code from symbol, but message/data from the render call
-    assert_equal({ "code" => -32601, "message" => "Custom method not found", "data" => { "info" => "more details" } }, json_response["error"])
+    assert_equal({ "code" => -32_601, "message" => "Custom method not found", "data" => { "info" => "more details" } },
+                 json_response["error"])
     assert_equal 4, json_response["id"]
   end
 
@@ -37,10 +40,10 @@ class TestingControllerTest < ActionDispatch::IntegrationTest
     get "/error_code"
     assert_response :success
 
-    json_response = @response.parsed_body
+    json_response = response.parsed_body
     assert_equal "2.0", json_response["jsonrpc"]
     # Uses code from option, default message from JSON_RPC::JsonRpcError
-    assert_equal({ "code" => -32600, "message" => "Invalid Request" }, json_response["error"])
+    assert_equal({ "code" => -32_600, "message" => "Invalid Request" }, json_response["error"])
     assert_equal 5, json_response["id"]
   end
 
@@ -48,10 +51,11 @@ class TestingControllerTest < ActionDispatch::IntegrationTest
     get "/error_code_override"
     assert_response :success
 
-    json_response = @response.parsed_body
+    json_response = response.parsed_body
     assert_equal "2.0", json_response["jsonrpc"]
     # Uses code from option, message/data from the render call
-    assert_equal({ "code" => -32600, "message" => "Specific invalid request", "data" => { "field" => "xyz" } }, json_response["error"])
+    assert_equal({ "code" => -32_600, "message" => "Specific invalid request", "data" => { "field" => "xyz" } },
+                 json_response["error"])
     assert_equal 6, json_response["id"]
   end
 
@@ -62,7 +66,7 @@ class TestingControllerTest < ActionDispatch::IntegrationTest
     post "/rpc", params: payload, headers: { "Content-Type" => "application/json" }
 
     assert_response :ok
-    json_response = @response.parsed_body
+    json_response = response.parsed_body
     assert_equal "2.0", json_response["jsonrpc"]
     assert_equal({ "message" => "Request processed successfully" }, json_response["result"])
     assert_equal 10, json_response["id"] # Should match the request id
@@ -76,7 +80,7 @@ class TestingControllerTest < ActionDispatch::IntegrationTest
     post "/rpc", params: payload, headers: { "Content-Type" => "application/json" }
 
     assert_response :ok
-    json_response = @response.parsed_body
+    json_response = response.parsed_body
     assert_equal "2.0", json_response["jsonrpc"]
     assert_equal({ "message" => "Request processed successfully" }, json_response["result"])
     # Controller action currently returns nil id for batch requests for simplicity
@@ -88,11 +92,11 @@ class TestingControllerTest < ActionDispatch::IntegrationTest
     post "/rpc", params: malformed_payload, headers: { "Content-Type" => "application/json" }
 
     # Middleware now passes through unparsable JSON
-    assert_response :ok
-    json_response = @response.parsed_body
+    assert_response :bad_request
+    json_response = response.parsed_body
     # Controller likely returns default success response with nil id
     assert_equal "2.0", json_response["jsonrpc"]
-    assert_equal({ "message" => "Request processed successfully" }, json_response["result"])
+    assert_equal({ "code" => -32_600, "message" => "Invalid Request" }, json_response["error"])
     assert_nil json_response["id"]
   end
 
@@ -101,11 +105,10 @@ class TestingControllerTest < ActionDispatch::IntegrationTest
     payload = { method: "test", id: 13 }.to_json
     post "/rpc", params: payload, headers: { "Content-Type" => "application/json" }
 
-    assert_response :ok
-    json_response = @response.parsed_body
-    # Controller likely returns default success response with nil id
+    assert_response :bad_request
+    json_response = response.parsed_body
     assert_equal "2.0", json_response["jsonrpc"]
-    assert_equal({ "message" => "Request processed successfully" }, json_response["result"])
+    assert_equal({ "code" => -32_600, "message" => "Invalid Request" }, json_response["error"])
     assert_nil json_response["id"]
   end
 
@@ -114,11 +117,11 @@ class TestingControllerTest < ActionDispatch::IntegrationTest
     post "/rpc", params: payload, headers: { "Content-Type" => "application/json" }
 
     # Empty batch does not trigger validation, passes through
-    assert_response :ok
-    json_response = @response.parsed_body
+    assert_response :bad_request
+    json_response = response.parsed_body
     # Controller likely returns default success response with nil id
     assert_equal "2.0", json_response["jsonrpc"]
-    assert_equal({ "message" => "Request processed successfully" }, json_response["result"])
+    assert_equal({ "code" => -32_600, "message" => "Invalid Request" }, json_response["error"])
     assert_nil json_response["id"]
   end
 
@@ -130,10 +133,10 @@ class TestingControllerTest < ActionDispatch::IntegrationTest
     post "/rpc", params: payload, headers: { "Content-Type" => "application/json" }
 
     assert_response :bad_request # 400
-    json_response = @response.parsed_body
+    json_response = response.parsed_body
     assert_equal "2.0", json_response["jsonrpc"]
     assert_nil json_response["id"]
-    assert_equal({ "code" => -32600, "message" => "Invalid Request" }, json_response["error"])
+    assert_equal({ "code" => -32_600, "message" => "Invalid Request" }, json_response["error"])
   end
 
   test "POST /rpc with incorrect Content-Type is passed through" do
@@ -145,11 +148,15 @@ class TestingControllerTest < ActionDispatch::IntegrationTest
     # and will likely still render its JSON response.
     assert_response :ok
     # We assert the response is NOT a JSON-RPC error from the middleware
-    json_response = @response.parsed_body rescue nil # Rescue potential parse error if not JSON
-    assert_not_equal(-32700, json_response&.dig("error", "code"))
-    assert_not_equal(-32600, json_response&.dig("error", "code"))
+    json_response = begin
+      response.parsed_body
+    rescue StandardError
+      nil
+    end
+    assert_not_equal(-32_700, json_response&.dig("error", "code"))
+    assert_not_equal(-32_600, json_response&.dig("error", "code"))
     # Check it hit the controller action and rendered the default JSON-RPC response
-    # because env['jsonrpc.payload'] was nil.
+    # because env['jsonrpc'] was nil.
     assert_equal "2.0", json_response["jsonrpc"]
     assert_equal({ "message" => "Request processed successfully" }, json_response["result"])
     assert_nil json_response["id"] # request_id will be nil in the controller
@@ -160,7 +167,7 @@ class TestingControllerTest < ActionDispatch::IntegrationTest
     post "/api/v1/rpc", params: payload, headers: { "Content-Type" => "application/json" }
 
     assert_response :ok
-    assert_equal 22, @response.parsed_body["id"]
+    assert_equal 22, response.parsed_body["id"]
   end
 
   test "POST /rpc/private/echo validates via lambda" do
@@ -168,7 +175,7 @@ class TestingControllerTest < ActionDispatch::IntegrationTest
     post "/rpc/private/echo", params: payload, headers: { "Content-Type" => "application/json" }
 
     assert_response :ok
-    assert_equal 23, @response.parsed_body["id"]
+    assert_equal 23, response.parsed_body["id"]
   end
 
   test "GET /rpc is passed through (results in 404)" do

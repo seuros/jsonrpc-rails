@@ -5,194 +5,126 @@ require "active_support/json"
 
 module JSONRPC_Rails
   module Middleware
-    # Rack middleware to strictly validate incoming JSON-RPC 2.0 requests.
-    # It checks for correct Content-Type, parses JSON, and validates the structure
-    # of Hashes and non-empty Arrays according to JSON-RPC 2.0 spec.
+    # Rack middleware that **validates** incoming JSON-RPC 2.0 payloads
+    # and injects fully-typed Ruby objects (Request / Notification /
+    # Response) into `env[:jsonrpc]` for easy downstream use.
     #
-    # If validation passes, it stores the parsed payload in `request.env['jsonrpc.payload']`
-    # and passes the request down the stack.
-    #
-    # If JSON parsing fails, or if the payload is a Hash/Array and fails JSON-RPC validation,
-    # it immediately returns the appropriate JSON-RPC 2.0 error response.
-    #
-    # Other valid JSON payloads (e.g., strings, numbers, booleans, null) are passed through.
+    # Validation always runs on the raw Hash/Array first; objects are only
+    # instantiated **after** the structure has been deemed valid, so malformed
+    # IDs or empty batches no longer raise before we can return a proper
+    # -32600 “Invalid Request”.
     class Validator
-      CONTENT_TYPE = "application/json"
-      ENV_PAYLOAD_KEY = :"jsonrpc.payload"
+      CONTENT_TYPE     = "application/json"
+      ENV_PAYLOAD_KEY  = :jsonrpc
 
+      # @param app [#call]
+      # @param paths [Array<String, Regexp, Proc>] paths to validate
       def initialize(app, paths = nil)
-        @app = app
-
+        @app   = app
         @paths = Array(paths || Rails.configuration.jsonrpc_rails.validated_paths)
       end
 
+      # Rack entry point
       def call(env)
         return @app.call(env) unless validate_path?(env["PATH_INFO"])
-
-        # Only process POST requests with the correct Content-Type
         return @app.call(env) unless env["REQUEST_METHOD"] == "POST" &&
                                      env["CONTENT_TYPE"]&.start_with?(CONTENT_TYPE)
 
-        # Read and parse the request body
-        # Safely read and rewind
         body = env["rack.input"].read
         env["rack.input"].rewind
-        payload = parse_json(body)
 
-        # Handle JSON parsing errors
-        # If parsing fails (returns nil), pass through
-        return @app.call(env) unless payload
+        raw_payload = parse_json(body)
 
-        # Determine if we should proceed with strict validation based on payload type and content
-        should_validate = false
-        is_batch = false
+        return jsonrpc_error_response(:invalid_request) unless raw_payload.is_a?(Hash) || raw_payload.is_a?(Array)
 
-        case payload
-        when Hash
-          # Validate single Hash only if 'jsonrpc' key is present
-          should_validate = payload.key?("jsonrpc")
-          is_batch = false
-        when Array
-          # Validate Array only if ALL elements are Hashes AND at least one has 'jsonrpc' key
-          all_hashes = payload.all? { |el| el.is_a?(Hash) }
-          any_jsonrpc = payload.any? { |el| el.is_a?(Hash) && el.key?("jsonrpc") }
-          if all_hashes && any_jsonrpc
-            should_validate = true
-            is_batch = true
-          end
-          # Note: Empty arrays or arrays not meeting the criteria will pass through
+        validity, = if raw_payload.is_a?(Array)
+                      validate_batch(raw_payload)
+        else
+                      validate_single(raw_payload)
         end
+        return validity unless validity == :valid
 
-        # If conditions for validation are not met, pass through
-        return @app.call(env) unless should_validate
+        env[ENV_PAYLOAD_KEY] = convert_to_objects(raw_payload)
 
-        # --- Proceed with strict validation ---
-        validation_result, _ = is_batch ? validate_batch(payload) : validate_single(payload)
-
-        # If strict validation failed (e.g., wrong version, missing method, invalid batch element), return the error
-        return validation_result unless validation_result == :valid
-
-        # Store the validated payload (original structure) in env for the controller
-        env[ENV_PAYLOAD_KEY] = payload
-
-        # Proceed to the next middleware/app
         @app.call(env)
       end
 
       private
 
-      # Parses the JSON body string using ActiveSupport::JSON. Returns parsed data or nil on failure.
       def parse_json(body)
         return nil if body.nil? || body.strip.empty?
 
         ActiveSupport::JSON.decode(body)
       rescue ActiveSupport::JSON.parse_error
-        # Return nil if parsing fails, allowing the request to pass through
         nil
       end
 
       def validate_path?(path)
         return false if @paths.empty?
 
-        @paths.any? do |m|
-          case m
-          when String then path == m
-          when Regexp then m.match?(path)
-          when Proc   then m.call(path)
+        @paths.any? do |matcher|
+          case matcher
+          when String then path == matcher
+          when Regexp then matcher.match?(path)
+          when Proc   then matcher.call(path)
           else             false
           end
         end
       end
 
-      # Performs strict validation on a single object to ensure it conforms
-      # to the JSON-RPC 2.0 structure (jsonrpc, method, params, id) and
-      # has no extraneous keys.
-      # Returns true if valid, false otherwise.
+      # -------------------- structure validation --------------------------------
+
       def validate_single_structure(obj)
-        # Must be a Hash
         return false unless obj.is_a?(Hash)
-
-        # Must have 'jsonrpc' key with value '2.0'
         return false unless obj["jsonrpc"] == "2.0"
-
-        # Must have 'method' key with a String value
         return false unless obj["method"].is_a?(String)
 
-        # Optional 'params' must be an Array or Hash if present
-        if obj.key?("params") && !obj["params"].is_a?(Array) && !obj["params"].is_a?(Hash)
-          return false
-        end
+        return false if obj.key?("params") && !obj["params"].is_a?(Array) && !obj["params"].is_a?(Hash)
 
-        # Optional 'id' must be a String, Number (Integer), or Null if present
-        if obj.key?("id") && ![ String, Integer, NilClass ].include?(obj["id"].class)
-          return false
-        end
+        return false if obj.key?("id") && ![ String, Integer, NilClass ].include?(obj["id"].class)
 
-        # Check for extraneous keys
-        allowed_keys = %w[jsonrpc method params id]
-        return false unless (obj.keys - allowed_keys).empty?
-
-        true # Structure is valid
+        allowed = %w[jsonrpc method params id]
+        (obj.keys - allowed).empty?
       end
 
-
-      # Validates a single JSON-RPC request object (must be a Hash).
-      # Returns [:valid, nil] on success.
-      # Returns [error_response_tuple, nil] on failure.
       def validate_single(obj)
-        # Assumes obj is a Hash due to check in `call`
         if validate_single_structure(obj)
           [ :valid, nil ]
         else
-          # Generate error response if structure is invalid (e.g., missing 'jsonrpc')
           [ jsonrpc_error_response(:invalid_request), nil ]
         end
       end
 
-      # Validates a batch JSON-RPC request (must be an Array).
-      # Returns [:valid, nil] if the batch structure is valid.
-      # Returns [error_response_tuple, nil] if the batch is empty or any element is invalid.
       def validate_batch(batch)
-        # Assumes batch is an Array due to check in `call`
-        # Batch request must be a non-empty array according to spec
-        unless batch.is_a?(Array) && !batch.empty?
-          return [ jsonrpc_error_response(:invalid_request), nil ]
-        end
+        return [ jsonrpc_error_response(:invalid_request), nil ] unless batch.is_a?(Array) && !batch.empty?
 
-        # Find first invalid element - stops processing as soon as it finds one
-        invalid_element = batch.find { |element| !validate_single_structure(element) }
-
-        # If an invalid element was found, return an error response immediately
-        if invalid_element
-          return [ jsonrpc_error_response(:invalid_request), nil ]
-        end
-
-        # All elements passed structural validation
-        [ :valid, nil ]
+        invalid = batch.find { |el| !validate_single_structure(el) }
+        invalid ? [ jsonrpc_error_response(:invalid_request), nil ] : [ :valid, nil ]
       end
 
-      # Generates a Rack response tuple for a given JSON-RPC error.
-      # Middleware-level errors always have id: nil.
-      # @param error_type [Symbol, JSON_RPC::JsonRpcError] The error symbol or object.
-      # @param status [Integer] The HTTP status code.
-      # @return [Array] Rack response tuple.
-      def jsonrpc_error_response(error_type, status: 400)
-        error_obj = if error_type.is_a?(JSON_RPC::JsonRpcError)
-                      error_type
+      # ------------------ conversion to typed objects ---------------------------
+
+      def convert_to_objects(raw)
+        case raw
+        when Hash
+          JSON_RPC::Parser.object_from_hash(raw)
+        when Array
+          raw.map { |h| JSON_RPC::Parser.object_from_hash(h) }
         else
-                      JSON_RPC::JsonRpcError.new(error_type)
+          raw # should never get here after validation
         end
+      end
 
-        response_body = JSON_RPC::Response.new(
-          id: nil, # Middleware errors have null id
-          error: error_obj.to_h,
-        ).to_json
+      # ------------------ error response helper ---------------------------------
 
-        [
-          status,
-          { "Content-Type" => CONTENT_TYPE },
-          [ response_body ]
-        ]
+      # @param error_sym [Symbol]
+      # @param status    [Integer]
+      # @return [Array] Rack triplet
+      def jsonrpc_error_response(error_sym, status: 400)
+        error_obj = JSON_RPC::JsonRpcError.build(error_sym)
+        payload   = JSON_RPC::Response.new(id: nil, error: error_obj).to_json
+
+        [ status, { "Content-Type" => CONTENT_TYPE }, [ payload ] ]
       end
     end
   end

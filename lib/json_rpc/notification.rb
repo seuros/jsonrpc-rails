@@ -12,6 +12,10 @@ module JSON_RPC
       super
     end
 
+    def self.from_h(h)
+      new(method: h["method"], params: h["params"])
+    end
+
     # Returns a hash representation of the notification, ready for JSON serialization.
     #
     # @return [Hash] The hash representation.
@@ -24,5 +28,7 @@ module JSON_RPC
       hash[:params] = params unless params.nil?
       hash
     end
+
+    def as_json(*) = to_h
   end
 end
