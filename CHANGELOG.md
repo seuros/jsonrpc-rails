@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.2](https://github.com/seuros/jsonrpc-rails/compare/jsonrpc-rails/v0.5.1...jsonrpc-rails/v0.5.2) (2025-06-29)
+
+
+### Bug Fixes
+
+* properly handle Response initialization with nil result values ([#10](https://github.com/seuros/jsonrpc-rails/issues/10)) ([2f8e5ac](https://github.com/seuros/jsonrpc-rails/commit/2f8e5ace81c9fb665dccfb3783d4d4af63bb52c0))
+
 ## [0.5.1](https://github.com/seuros/jsonrpc-rails/compare/jsonrpc-rails/v0.5.0...jsonrpc-rails/v0.5.1) (2025-05-10)
 
 
