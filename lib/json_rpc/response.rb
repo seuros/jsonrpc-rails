@@ -9,14 +9,25 @@ module JSON_RPC
     # @param result [Object, nil] The result data (if successful).
     # @param error [Hash, JSON_RPC::JsonRpcError, Symbol, nil] The error object/symbol (if failed).
     # @raise [ArgumentError] if both result and error are provided, or neither is provided for non-null id.
-    def initialize(id:, result: nil, error: nil)
-      validate_response(id, result, error)
+    def initialize(id:, **kwargs)
+      # Check which parameters were actually provided
+      has_result = kwargs.key?(:result)
+      has_error = kwargs.key?(:error)
+
+      result = kwargs[:result]
+      error = kwargs[:error]
+
+      validate_response(id, has_result, has_error, result, error)
       error_obj = process_error(error)
+
       super(id: id, result: result, error: error_obj)
     end
 
     def self.from_h(h)
-      new(id: h["id"], result: h["result"], error: h["error"])
+      args = { id: h["id"] }
+      args[:result] = h["result"] if h.key?("result")
+      args[:error] = h["error"] if h.key?("error")
+      new(**args)
     end
 
     # Returns a hash representation of the response, ready for JSON serialization.
@@ -40,22 +51,21 @@ module JSON_RPC
     # Validates the response structure according to JSON-RPC 2.0 spec.
     #
     # @param id [Object] The request ID.
+    # @param has_result [Boolean] Whether result was provided.
+    # @param has_error [Boolean] Whether error was provided.
     # @param result [Object] The result data.
     # @param error_input [Object] The error data/object/symbol.
     # @raise [ArgumentError] for invalid combinations.
-    def validate_response(id, result, error_input)
-      # ID must be present (can be null) in a response matching a request.
+    def validate_response(id, has_result, has_error, result, error_input)
+      # Cannot have both result and error
+      if has_result && has_error
+        raise ArgumentError, "Response cannot contain both 'result' and 'error'"
+      end
 
-      raise ArgumentError, "Response cannot contain both 'result' and 'error'" if !error_input.nil? && !result.nil?
-
-      # If id is not null, either result or error MUST be present.
-      return unless !id.nil? && error_input.nil? && result.nil?
-
-      # This check assumes if both are nil, it's invalid for non-null id.
-      # `result: nil` is a valid success response. The check should ideally know
-      # if `result` was explicitly passed as nil vs not passed at all.
-      # Data.define might make this tricky. Let's keep the original logic for now.
-      raise ArgumentError, "Response with non-null ID must contain either 'result' or 'error'"
+      # If id is not null, either result or error MUST be present
+      if !id.nil? && !has_result && !has_error
+        raise ArgumentError, "Response with non-null ID must contain either 'result' or 'error'"
+      end
     end
 
     # Processes the error input into a standard error hash.
@@ -72,11 +82,11 @@ module JSON_RPC
         # Assume it's already a valid JSON-RPC error object hash
         error_input
       when Symbol
-        # Build from a standard error symbol
+        # Build from a standard error symbol (build returns a hash)
         JSON_RPC::JsonRpcError.build(error_input)
       else
         # Fallback to internal error if the format is unexpected
-        JSON_RPC::JsonRpcError.build(:internal_error, message: "Invalid error format provided").to_h
+        JSON_RPC::JsonRpcError.build(:internal_error, message: "Invalid error format provided")
       end
     end
   end
