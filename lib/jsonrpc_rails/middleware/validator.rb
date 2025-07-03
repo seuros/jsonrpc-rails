@@ -35,7 +35,10 @@ module JSONRPC_Rails
 
         raw_payload = parse_json(body)
 
-        return jsonrpc_error_response(:invalid_request) unless raw_payload.is_a?(Hash) || raw_payload.is_a?(Array)
+        unless raw_payload.is_a?(Hash) || raw_payload.is_a?(Array)
+          id = extract_id_from_raw_payload(raw_payload)
+          return jsonrpc_error_response(:invalid_request, id: id)
+        end
 
         validity, = if raw_payload.is_a?(Array)
                       validate_batch(raw_payload)
@@ -89,9 +92,10 @@ module JSONRPC_Rails
 
       def validate_single(obj)
         if validate_single_structure(obj)
-          [ :valid, nil ]
+          [ :valid, obj["id"] ]
         else
-          [ jsonrpc_error_response(:invalid_request), nil ]
+          id = obj.is_a?(Hash) ? obj["id"] : nil
+          [ jsonrpc_error_response(:invalid_request, id: id), id ]
         end
       end
 
@@ -119,12 +123,21 @@ module JSONRPC_Rails
 
       # @param error_sym [Symbol]
       # @param status    [Integer]
+      # @param id       [String, Integer, nil]
       # @return [Array] Rack triplet
-      def jsonrpc_error_response(error_sym, status: 400)
+      def jsonrpc_error_response(error_sym, status: 400, id: nil)
         error_obj = JSON_RPC::JsonRpcError.build(error_sym)
-        payload   = JSON_RPC::Response.new(id: nil, error: error_obj).to_json
+        payload   = JSON_RPC::Response.new(id: id, error: error_obj).to_json
 
         [ status, { "Content-Type" => CONTENT_TYPE }, [ payload ] ]
+      end
+
+      # Extract ID from raw payload if possible
+      def extract_id_from_raw_payload(raw)
+        return nil unless raw.is_a?(Hash)
+        raw["id"]
+      rescue
+        nil
       end
     end
   end

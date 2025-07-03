@@ -109,7 +109,7 @@ class TestingControllerTest < ActionDispatch::IntegrationTest
     json_response = response.parsed_body
     assert_equal "2.0", json_response["jsonrpc"]
     assert_equal({ "code" => -32_600, "message" => "Invalid Request" }, json_response["error"])
-    assert_nil json_response["id"]
+    assert_equal 13, json_response["id"]  # ID should be preserved from the request
   end
 
   test "POST /rpc with empty batch array returns Invalid Request" do
