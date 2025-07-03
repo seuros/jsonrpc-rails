@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.3](https://github.com/seuros/jsonrpc-rails/compare/jsonrpc-rails/v0.5.2...jsonrpc-rails/v0.5.3) (2025-07-03)
+
+
+### Bug Fixes
+
+* json-rpc expect the id to return with the error. ([c5eff42](https://github.com/seuros/jsonrpc-rails/commit/c5eff42fbbdeb34e1267c04541d20b58fcb541ba))
+
 ## [0.5.2](https://github.com/seuros/jsonrpc-rails/compare/jsonrpc-rails/v0.5.1...jsonrpc-rails/v0.5.2) (2025-06-29)
 
 
