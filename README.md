@@ -184,6 +184,58 @@ class MyApiController < ApplicationController
 end
 ```
 
+## Error Codes
+
+The gem implements the complete JSON-RPC 2.0 error specification. All error codes are defined in `lib/json_rpc/json_rpc_error.rb` and can be used either as numeric codes or symbols:
+
+| Code | Symbol | Name | Description |
+|------|--------|------|-------------|
+| -32700 | `:parse_error` | Parse Error | Invalid JSON was received by the server |
+| -32600 | `:invalid_request` | Invalid Request | The JSON sent is not a valid Request object |
+| -32601 | `:method_not_found` | Method Not Found | The method does not exist / is not available |
+| -32602 | `:invalid_params` | Invalid Params | Invalid method parameter(s) |
+| -32603 | `:internal_error` | Internal Error | Internal JSON-RPC error |
+| -32000 | `:server_error` | Server Error | Implementation-defined server error |
+
+### Usage Examples
+
+```ruby
+# Using numeric codes
+render jsonrpc: {}, error: -32601, id: 1
+
+# Using symbols
+render jsonrpc: {}, error: :method_not_found, id: 1
+
+# Creating error objects
+error = JSON_RPC::JsonRpcError.build(:invalid_params)
+render jsonrpc: JSON_RPC::Response.new(id: 1, error: error)
+```
+
+## JSONRPC Namespace
+
+The gem uses two main namespaces to separate core JSON-RPC functionality from Rails integration:
+
+### JSON_RPC Module (Core Specification)
+
+Contains the core JSON-RPC 2.0 specification objects:
+
+- **`JSON_RPC::Request`** - Represents a JSON-RPC request with method, params, and id
+- **`JSON_RPC::Response`** - Represents a JSON-RPC response with result or error
+- **`JSON_RPC::Notification`** - Represents a JSON-RPC notification (request without id)
+- **`JSON_RPC::JsonRpcError`** - Exception class for JSON-RPC errors with standard error codes
+- **`JSON_RPC::Parser`** - Utility for converting hashes to typed JSON-RPC objects
+
+### JSONRPC_Rails Module (Rails Integration)
+
+Contains Rails-specific integration components:
+
+- **`JSONRPC_Rails::Railtie`** - Rails initialization, middleware setup, and renderer registration
+- **`JSONRPC_Rails::Middleware::Validator`** - Rack middleware for validating JSON-RPC requests
+- **`JSONRPC_Rails::ControllerHelpers`** - Helper methods like `jsonrpc_params` and `jsonrpc_params_batch?`
+- **`JSONRPC_Rails::VERSION`** - Current gem version
+
+This separation ensures clean architecture where core JSON-RPC logic is independent of Rails, while Rails-specific features are properly isolated.
+
 ## Testing
 
 A dummy Rails application is included within the gem (located in `test/dummy`) to facilitate testing. You can run the tests from the **project root directory** by executing:
