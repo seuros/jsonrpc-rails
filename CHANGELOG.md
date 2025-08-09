@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.4](https://github.com/seuros/jsonrpc-rails/compare/jsonrpc-rails/v0.5.3...jsonrpc-rails/v0.5.4) (2025-08-09)
+
+
+### Bug Fixes
+
+* resolve Rack::Lint compatibility issue with input stream rewind ([#13](https://github.com/seuros/jsonrpc-rails/issues/13)) ([0ec0f28](https://github.com/seuros/jsonrpc-rails/commit/0ec0f280e1b3b71ad3a38f1d961fbfe073aab38b))
+
 ## [0.5.3](https://github.com/seuros/jsonrpc-rails/compare/jsonrpc-rails/v0.5.2...jsonrpc-rails/v0.5.3) (2025-07-03)
 
 
