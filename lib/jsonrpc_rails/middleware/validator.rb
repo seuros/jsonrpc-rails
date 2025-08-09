@@ -2,6 +2,7 @@
 
 require "json"
 require "active_support/json"
+require "stringio"
 
 module JSONRPC_Rails
   module Middleware
@@ -31,7 +32,9 @@ module JSONRPC_Rails
                                      env["CONTENT_TYPE"]&.start_with?(CONTENT_TYPE)
 
         body = env["rack.input"].read
-        env["rack.input"].rewind
+        # Replace consumed input with fresh StringIO for downstream middleware
+        # This is Rack 3.0+ compatible and works with all input stream types
+        env["rack.input"] = StringIO.new(body)
 
         raw_payload = parse_json(body)
 
@@ -129,7 +132,7 @@ module JSONRPC_Rails
         error_obj = JSON_RPC::JsonRpcError.build(error_sym)
         payload   = JSON_RPC::Response.new(id: id, error: error_obj).to_json
 
-        [ status, { "Content-Type" => CONTENT_TYPE }, [ payload ] ]
+        [ status, { "content-type" => CONTENT_TYPE }, [ payload ] ]
       end
 
       # Extract ID from raw payload if possible
