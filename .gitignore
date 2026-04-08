@@ -10,3 +10,4 @@
 /test/dummy/tmp/
 .idea
 Gemfile.lock
+gemfiles/*.gemfile.lock

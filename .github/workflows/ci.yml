@@ -24,6 +24,17 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    strategy:
+      fail-fast: false
+      matrix:
+        ruby: ['3.4.2', '4.0.2']
+        rails: ['8.0', '8.1', 'edge']
+        exclude:
+          - ruby: '4.0.2'
+            rails: '8.0'
+
+    name: test (Ruby ${{ matrix.ruby }} / Rails ${{ matrix.rails }})
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -31,12 +42,15 @@ jobs:
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: ruby-3.4.2
+          ruby-version: ruby-${{ matrix.ruby }}
           bundler-cache: true
+        env:
+          BUNDLE_GEMFILE: gemfiles/rails_${{ matrix.rails }}.gemfile
 
       - name: Run tests
         env:
           RAILS_ENV: test
+          BUNDLE_GEMFILE: gemfiles/rails_${{ matrix.rails }}.gemfile
         run: bin/rails test
 
 
