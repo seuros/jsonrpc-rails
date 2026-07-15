@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/seuros/jsonrpc-rails/compare/jsonrpc-rails/v0.5.4...jsonrpc-rails/v0.6.0) (2026-07-15)
+
+
+### Features
+
+* expand JSON-RPC middleware validation ([be79a96](https://github.com/seuros/jsonrpc-rails/commit/be79a966b37492381aea010506f53c3f4618dc04))
+
 ## [0.5.4](https://github.com/seuros/jsonrpc-rails/compare/jsonrpc-rails/v0.5.3...jsonrpc-rails/v0.5.4) (2025-08-09)
 
 
