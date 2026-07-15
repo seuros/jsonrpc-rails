@@ -15,7 +15,7 @@ jobs:
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: ruby-3.4.2
+          ruby-version: ruby-3.4.10
           bundler-cache: true
 
       - name: Lint code for consistent style
@@ -27,10 +27,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ruby: ['3.4.2', '4.0.2']
+        ruby: ['3.4.10', '4.0.6']
         rails: ['8.0', '8.1', 'edge']
         exclude:
-          - ruby: '4.0.2'
+          - ruby: '4.0.6'
             rails: '8.0'
 
     name: test (Ruby ${{ matrix.ruby }} / Rails ${{ matrix.rails }})
@@ -52,5 +52,3 @@ jobs:
           RAILS_ENV: test
           BUNDLE_GEMFILE: gemfiles/rails_${{ matrix.rails }}.gemfile
         run: bin/rails test
-
-
