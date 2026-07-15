@@ -105,8 +105,8 @@ module JSONRPC_Rails
           assert_equal 400, status
 
           response_data = JSON.parse(body.to_enum.first)
-          assert_equal(-32600, response_data["error"]["code"])
-          assert_equal("Invalid Request", response_data["error"]["message"])
+          assert_equal(-32700, response_data["error"]["code"])
+          assert_equal("Parse error", response_data["error"]["message"])
         end
       end
 
@@ -116,8 +116,12 @@ module JSONRPC_Rails
         env = rack_env_for_json_post("")
 
         assert_nothing_raised do
-          status, _headers, _body = @lint_wrapped.call(env)
+          status, _headers, body = @lint_wrapped.call(env)
           assert_equal 400, status
+
+          response_data = JSON.parse(body.to_enum.first)
+          assert_equal(-32700, response_data["error"]["code"])
+          assert_equal("Parse error", response_data["error"]["message"])
         end
       end
 

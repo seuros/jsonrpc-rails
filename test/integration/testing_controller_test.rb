@@ -91,12 +91,10 @@ class TestingControllerTest < ActionDispatch::IntegrationTest
     malformed_payload = '{"jsonrpc": "2.0", "method": "test", "id": 12' # Missing closing brace
     post "/rpc", params: malformed_payload, headers: { "Content-Type" => "application/json" }
 
-    # Middleware now passes through unparsable JSON
     assert_response :bad_request
     json_response = response.parsed_body
-    # Controller likely returns default success response with nil id
     assert_equal "2.0", json_response["jsonrpc"]
-    assert_equal({ "code" => -32_600, "message" => "Invalid Request" }, json_response["error"])
+    assert_equal({ "code" => -32_700, "message" => "Parse error" }, json_response["error"])
     assert_nil json_response["id"]
   end
 

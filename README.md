@@ -54,6 +54,30 @@ config.jsonrpc_rails.validated_paths = [
 Leave the array empty (default) and the middleware is effectively off.
 Use [/.*\z/] if you really want it on everywhere.
 
+Protocol integrations can reuse the parsing, JSON-RPC validation, typed-object
+conversion, and error handling while adding their own envelope rules:
+
+```ruby
+config.middleware.use JSONRPC_Rails::Middleware::Validator,
+                      [ "/mcp" ],
+                      payload_validator: MyProtocolValidator,
+                      batch_policy: :reject
+```
+
+`payload_validator` may implement `valid?(payload)` or `call(payload)` and receives
+the decoded Hash or Array after generic JSON-RPC validation. Batches are allowed by
+default; `batch_policy: :reject` disables them.
+
+By default, matching POST requests without an `application/json` content type pass
+through untouched. Protocol endpoints that accept only JSON-RPC can reject those
+requests with HTTP 415 instead:
+
+```ruby
+config.middleware.use JSONRPC_Rails::Middleware::Validator,
+                      [ "/rpc" ],
+                      require_json_content_type: true
+```
+
 In your controllers, you can render JSON-RPC responses like so:
 
 ```ruby
@@ -100,8 +124,8 @@ You can override the default `message` or add `data` for either method by provid
 The gem automatically inserts `JSONRPC_Rails::Middleware::Validator` into your application's middleware stack. This middleware performs the following actions for incoming **POST** requests with `Content-Type: application/json`:
 
 1.  **Parses** the JSON body. Returns a JSON-RPC `Parse error (-32700)` if parsing fails.
-2.  **Validates** the structure against the JSON-RPC 2.0 specification (single or batch). It performs strict validation, ensuring `jsonrpc: "2.0"`, a string `method`, optional `params` (array/object), optional `id` (string/number/null), and **no extraneous keys**. Returns a JSON-RPC `Invalid Request (-32600)` error if validation fails. **Note:** For batch requests, if *any* individual request within the batch is structurally invalid, the entire batch is rejected with a single `Invalid Request (-32600)` error.
-3.  **Stores** the validated, parsed payload (the original Ruby Hash or Array) in `request.env[:jsonrpc]` if validation succeeds.
+2.  **Validates** request, notification, and response structures against JSON-RPC 2.0, including single and batch payloads. Extension members are accepted, while conflicting reserved envelope members are rejected. Returns a JSON-RPC `Invalid Request (-32600)` error if validation fails. **Note:** For batch payloads, if *any* message is structurally invalid, the entire batch is rejected with a single `Invalid Request (-32600)` error.
+3.  **Stores** the validated payload as a typed `JSON_RPC::Request`, `JSON_RPC::Notification`, or `JSON_RPC::Response` (or an Array of those objects) in `request.env[:jsonrpc]`.
 4.  **Passes** the request to the next middleware or your controller action.
 
 In your controller action, you can access the validated payload like this:
